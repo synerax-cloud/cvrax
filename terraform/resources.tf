@@ -35,20 +35,13 @@ resource "google_compute_network" "vpc" {
   depends_on = [google_project_service.required_apis]
 }
 
-# Subnet for VPC connector
-resource "google_compute_subnetwork" "vpc_subnet" {
-  name          = "${var.service_name}-subnet"
-  ip_cidr_range = "10.9.0.0/28"
-  region        = var.region
-  network       = google_compute_network.vpc.id
-}
-
 # VPC Access Connector (for Cloud Run to Cloud SQL)
+# Note: Connector creates its own subnet automatically
 resource "google_vpc_access_connector" "connector" {
   name          = "${var.service_name}-vpc-connector"
   region        = var.region
   network       = google_compute_network.vpc.name
-  ip_cidr_range = "10.9.0.0/28"
+  ip_cidr_range = "10.100.0.0/28"
   
   depends_on = [google_project_service.required_apis]
 }
