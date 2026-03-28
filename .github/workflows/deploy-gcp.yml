@@ -38,7 +38,8 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       artifact_registry_url: ${{ steps.outputs.outputs.artifact_registry_url }}
-      cloud_run_url: ${{ steps.outputs.outputs.cloud_run_url }}
+      service_name: ${{ steps.outputs.outputs.service_name }}
+      region: ${{ steps.outputs.outputs.region }}
     
     steps:
       - name: Checkout code
@@ -148,7 +149,8 @@ jobs:
         working-directory: terraform
         run: |
           echo "artifact_registry_url=$(terraform output -raw artifact_registry_url)" >> $GITHUB_OUTPUT
-          echo "cloud_run_url=$(terraform output -raw cloud_run_url)" >> $GITHUB_OUTPUT
+          echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
+          echo "region=$(terraform output -raw region)" >> $GITHUB_OUTPUT
   
   deploy:
     name: Build and Deploy Application
@@ -185,16 +187,27 @@ jobs:
       
       - name: Deploy to Cloud Run
         run: |
-          gcloud run deploy ${{ env.SERVICE_NAME }} \
+          gcloud run deploy ${{ needs.terraform.outputs.service_name }} \
             --image ${{ needs.terraform.outputs.artifact_registry_url }}/${{ env.SERVICE_NAME }}:${{ github.sha }} \
-            --region ${{ env.REGION }} \
-            --platform managed
+            --region ${{ needs.terraform.outputs.region }} \
+            --platform managed \
+            --allow-unauthenticated \
+            --service-account github-actions@${{ secrets.GCP_PROJECT_ID }}.iam.gserviceaccount.com \
+            --vpc-connector cvrax-vpc-connector \
+            --vpc-egress private-ranges-only \
+            --set-env-vars NODE_ENV=production \
+            --set-secrets DATABASE_URL=DATABASE_URL:latest,NEXTAUTH_SECRET=NEXTAUTH_SECRET:latest,GOOGLE_CLIENT_ID=GOOGLE_CLIENT_ID:latest,GOOGLE_CLIENT_SECRET=GOOGLE_CLIENT_SECRET:latest \
+            --min-instances 0 \
+            --max-instances 10 \
+            --memory 512Mi \
+            --cpu 1 \
+            --timeout 300
       
       - name: Run Database Migrations
         run: |
           # Get Cloud Run service URL
-          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
-            --region ${{ env.REGION }} \
+          SERVICE_URL=$(gcloud run services describe ${{ needs.terraform.outputs.service_name }} \
+            --region ${{ needs.terraform.outputs.region }} \
             --format 'value(status.url)')
           
           echo "✅ Deployment successful!"
@@ -203,10 +216,14 @@ jobs:
       
       - name: Deployment Summary
         run: |
+          SERVICE_URL=$(gcloud run services describe ${{ needs.terraform.outputs.service_name }} \
+            --region ${{ needs.terraform.outputs.region }} \
+            --format 'value(status.url)')
+            
           echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
           echo "" >> $GITHUB_STEP_SUMMARY
           echo "✅ **Status**: Successful" >> $GITHUB_STEP_SUMMARY
-          echo "🌐 **URL**: ${{ needs.terraform.outputs.cloud_run_url }}" >> $GITHUB_STEP_SUMMARY
+          echo "🌐 **URL**: $SERVICE_URL" >> $GITHUB_STEP_SUMMARY
           echo "📦 **Image**: \`${{ github.sha }}\`" >> $GITHUB_STEP_SUMMARY
           echo "🏷️ **Tag**: \`latest\`" >> $GITHUB_STEP_SUMMARY
           echo "📅 **Deployed**: $(date -u +"%Y-%m-%d %H:%M:%S UTC")" >> $GITHUB_STEP_SUMMARY
