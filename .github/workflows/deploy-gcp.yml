@@ -148,9 +148,23 @@ jobs:
         id: outputs
         working-directory: terraform
         run: |
-          echo "artifact_registry_url=$(terraform output -raw artifact_registry_url)" >> $GITHUB_OUTPUT
-          echo "service_name=$(terraform output -raw service_name)" >> $GITHUB_OUTPUT
-          echo "region=$(terraform output -raw region)" >> $GITHUB_OUTPUT
+          ARTIFACT_URL=$(terraform output -raw artifact_registry_url)
+          SERVICE_NAME=$(terraform output -raw service_name)
+          REGION=$(terraform output -raw region)
+          
+          echo "📤 Terraform outputs:"
+          echo "  artifact_registry_url: $ARTIFACT_URL"
+          echo "  service_name: $SERVICE_NAME"
+          echo "  region: $REGION"
+          
+          if [ -z "$ARTIFACT_URL" ]; then
+            echo "::error::artifact_registry_url output is empty! Check if Terraform Apply succeeded."
+            exit 1
+          fi
+          
+          echo "artifact_registry_url=$ARTIFACT_URL" >> $GITHUB_OUTPUT
+          echo "service_name=$SERVICE_NAME" >> $GITHUB_OUTPUT
+          echo "region=$REGION" >> $GITHUB_OUTPUT
   
   deploy:
     name: Build and Deploy Application
