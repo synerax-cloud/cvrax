@@ -161,6 +161,27 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      - name: Debug Terraform Outputs
+        run: |
+          echo "artifact_registry_url: ${{ needs.terraform.outputs.artifact_registry_url }}"
+          echo "service_name: ${{ needs.terraform.outputs.service_name }}"
+          echo "region: ${{ needs.terraform.outputs.region }}"
+          
+          if [ -z "${{ needs.terraform.outputs.artifact_registry_url }}" ]; then
+            echo "::error::artifact_registry_url is empty!"
+            exit 1
+          fi
+          
+          if [ -z "${{ needs.terraform.outputs.service_name }}" ]; then
+            echo "::error::service_name is empty!"
+            exit 1
+          fi
+          
+          if [ -z "${{ needs.terraform.outputs.region }}" ]; then
+            echo "::error::region is empty!"
+            exit 1
+          fi
+      
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
