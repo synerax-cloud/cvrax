@@ -120,6 +120,21 @@ jobs:
         working-directory: terraform
         run: terraform init
       
+      - name: Clean up failed connector (if exists)
+        working-directory: terraform
+        run: |
+          echo "Checking for failed VPC connector..."
+          if gcloud compute networks vpc-access connectors describe cvrax-vpc-connector \
+            --region=us-central1 --project=${{ secrets.GCP_PROJECT_ID }} 2>/dev/null; then
+            echo "Connector exists, attempting to delete..."
+            gcloud compute networks vpc-access connectors delete cvrax-vpc-connector \
+              --region=us-central1 \
+              --project=${{ secrets.GCP_PROJECT_ID }} \
+              --quiet || echo "Delete failed, continuing anyway"
+            echo "Waiting 60 seconds for deletion..."
+            sleep 60
+          fi
+      
       - name: Terraform Plan
         working-directory: terraform
         run: terraform plan -out=tfplan
