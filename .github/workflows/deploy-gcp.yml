@@ -1,3 +1,20 @@
+# Deploy CVRAX to Google Cloud Platform
+#
+# Required GitHub Secrets:
+#   GCP_PROJECT_ID - Your GCP project ID
+#   WIF_PROVIDER - Workload Identity Provider resource name
+#   WIF_SERVICE_ACCOUNT - Service account email for Workload Identity
+#   NEXTAUTH_SECRET - Random secret for NextAuth (generate with: openssl rand -base64 32)
+#   GOOGLE_CLIENT_ID - Google OAuth Client ID
+#   GOOGLE_CLIENT_SECRET - Google OAuth Client Secret
+#   DOMAIN_NAME - (Optional) Custom domain name
+#
+# Setup: Run ./scripts/setup-workload-identity.sh to generate all required values
+# Documentation: See QUICKSTART.md for detailed setup instructions
+#
+# Note: This uses Workload Identity Federation (keyless authentication)
+# instead of service account keys for better security.
+
 name: Deploy to GCP Cloud Run
 
 on:
@@ -23,10 +40,54 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v3
       
+      - name: Validate Required Secrets
+        run: |
+          echo "🔍 Validating required secrets..."
+          
+          missing_secrets=()
+          
+          if [ -z "${{ secrets.GCP_PROJECT_ID }}" ]; then
+            missing_secrets+=("GCP_PROJECT_ID")
+          fi
+          
+          if [ -z "${{ secrets.WIF_PROVIDER }}" ]; then
+            missing_secrets+=("WIF_PROVIDER")
+          fi
+          
+          if [ -z "${{ secrets.WIF_SERVICE_ACCOUNT }}" ]; then
+            missing_secrets+=("WIF_SERVICE_ACCOUNT")
+          fi
+          
+          if [ -z "${{ secrets.NEXTAUTH_SECRET }}" ]; then
+            missing_secrets+=("NEXTAUTH_SECRET")
+          fi
+          
+          if [ -z "${{ secrets.GOOGLE_CLIENT_ID }}" ]; then
+            missing_secrets+=("GOOGLE_CLIENT_ID")
+          fi
+          
+          if [ -z "${{ secrets.GOOGLE_CLIENT_SECRET }}" ]; then
+            missing_secrets+=("GOOGLE_CLIENT_SECRET")
+          fi
+          
+          if [ ${#missing_secrets[@]} -ne 0 ]; then
+            echo "::error::❌ Missing required GitHub secrets: ${missing_secrets[*]}"
+            echo ""
+            echo "📋 To fix this:"
+            echo "1. Run: ./scripts/setup-workload-identity.sh"
+            echo "2. Add secrets to: https://github.com/${{ github.repository }}/settings/secrets/actions"
+            echo "3. See QUICKSTART.md for detailed instructions"
+            echo ""
+            exit 1
+          fi
+          
+          echo "✅ All required secrets are present"
+      
       - name: Authenticate to Google Cloud
         uses: google-github-actions/auth@v1
         with:
-          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          workload_identity_provider: ${{ secrets.WIF_PROVIDER }}
+          service_account: ${{ secrets.WIF_SERVICE_ACCOUNT }}
       
       - name: Set up Cloud SDK
         uses: google-github-actions/setup-gcloud@v1
