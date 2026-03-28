@@ -1,0 +1,272 @@
+// Prisma schema for CVRAX - CV Generation Platform
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+// User account from OAuth
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  image         String?   // Google profile picture
+  emailVerified DateTime?
+  
+  accounts      Account[]
+  sessions      Session[]
+  profile       Profile?
+  cvs           CV[]
+  
+  subscriptionStatus String @default("FREE") // "FREE", "BASIC", "PREMIUM", "ENTERPRISE"
+  subscriptionEnd    DateTime?
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("users")
+}
+
+// OAuth accounts
+model Account {
+  id                String  @id @default(cuid())
+  userId            String
+  type              String
+  provider          String
+  providerAccountId String
+  refresh_token     String?
+  access_token      String?
+  expires_at        Int?
+  token_type        String?
+  scope             String?
+  id_token          String?
+  session_state     String?
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([provider, providerAccountId])
+  @@map("accounts")
+}
+
+// NextAuth sessions
+model Session {
+  id           String   @id @default(cuid())
+  sessionToken String   @unique
+  userId       String
+  expires      DateTime
+  user         User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("sessions")
+}
+
+// User profile with CV details
+model Profile {
+  id     String @id @default(cuid())
+  userId String @unique
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Personal Information
+  fullName     String
+  phone        String?
+  location     String?
+  website      String?
+  linkedin     String?
+  github       String?
+  portfolio    String?
+  
+  // Professional Summary
+  headline     String?   // e.g., "Senior Software Engineer"
+  summary      String?
+  
+  // Experience
+  experiences  Experience[]
+  
+  // Education
+  education    Education[]
+  
+  // Skills
+  skills       Skill[]
+  
+  // Projects
+  projects     Project[]
+  
+  // Certifications
+  certifications Certification[]
+  
+  // Languages
+  languages    Language[]
+  
+  // Custom sections
+  customSections CustomSection[]
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("profiles")
+}
+
+// Work Experience
+model Experience {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  company      String
+  position     String
+  location     String?
+  startDate    DateTime
+  endDate      DateTime?
+  current      Boolean  @default(false)
+  description  String
+  achievements String   // JSON string of array
+  
+  order     Int // For custom ordering
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("experiences")
+}
+
+// Education
+model Education {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  institution String
+  degree      String
+  field       String?
+  location    String?
+  startDate   DateTime
+  endDate     DateTime?
+  current     Boolean  @default(false)
+  gpa         String?
+  description String?
+  
+  order     Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("education")
+}
+
+// Skills
+model Skill {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  name     String
+  category String   // e.g., "Programming", "Tools", "Soft Skills"
+  level    Int?     // 1-5 proficiency level
+  
+  order Int
+  
+  @@map("skills")
+}
+
+// Projects
+model Project {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  name        String
+  description String
+  technologies String   // JSON string of array
+  url         String?
+  github      String?
+  startDate   DateTime?
+  endDate     DateTime?
+  highlights  String   // JSON string of array
+  
+  order Int
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("projects")
+}
+
+// Certifications
+model Certification {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  name         String
+  issuer       String
+  issueDate    DateTime
+  expiryDate   DateTime?
+  credentialId String?
+  url          String?
+  
+  order Int
+  
+  @@map("certifications")
+}
+
+// Languages
+model Language {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  name        String
+  proficiency String // e.g., "Native", "Fluent", "Professional", "Basic"
+  
+  order Int
+  
+  @@map("languages")
+}
+
+// Custom sections (for flexibility)
+model CustomSection {
+  id        String   @id @default(cuid())
+  profileId String
+  profile   Profile  @relation(fields: [profileId], references: [id], onDelete: Cascade)
+  
+  title   String
+  content String
+  type    String   // "text", "list", "table"
+  
+  order Int
+  
+  @@map("custom_sections")
+}
+
+// Generated CVs
+model CV {
+  id     String @id @default(cuid())
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  title          String // User-defined title like "Software Engineer - Google"
+  templateId     String // Reference to template used
+  
+  // Job Description Analysis (Phase 3)
+  jobDescription String?
+  jdKeywords     String?  // JSON string of keywords array
+  matchScore     Int?     // 0-100
+  
+  // Customizations for this specific CV
+  customizations String?  // JSON string of modifications
+  
+  // Generated files
+  pdfUrl         String?
+  latexSource    String?
+  
+  // Status
+  status         String @default("DRAFT") // "DRAFT", "GENERATING", "READY", "ERROR"
+  
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  
+  @@map("cvs")
+}
