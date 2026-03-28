@@ -1,0 +1,26 @@
+# GCP Project Configuration
+project_id = "your-gcp-project-id"
+region     = "us-central1"
+environment = "production"
+
+# Application Configuration
+service_name = "cvrax"
+domain_name  = "" # Optional: your custom domain (e.g., "cvrax.example.com")
+
+# Database Configuration
+database_tier = "db-f1-micro" # Free tier: db-f1-micro, Standard: db-n1-standard-1
+database_name = "cvrax"
+
+# Cloud Run Configuration
+min_instances    = 0  # 0 for cost savings (cold starts)
+max_instances    = 10
+container_memory = "512Mi"
+container_cpu    = "1"
+
+# Secrets (DO NOT COMMIT THESE VALUES)
+# Generate with: openssl rand -base64 32
+nextauth_secret = "your-nextauth-secret-here"
+
+# Get from Google Cloud Console OAuth 2.0 Client IDs
+google_client_id     = "your-google-client-id"
+google_client_secret = "your-google-client-secret"

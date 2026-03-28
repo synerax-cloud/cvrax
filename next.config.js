@@ -3,6 +3,9 @@ const nextConfig = {
   reactStrictMode: true,
   swcMinify: true,
   
+  // Standalone output for Docker deployment
+  output: 'standalone',
+  
   // Image optimization for Google OAuth avatars
   images: {
     domains: ['lh3.googleusercontent.com'],
