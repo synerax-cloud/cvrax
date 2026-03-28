@@ -13,7 +13,7 @@ terraform {
   }
   
   backend "gcs" {
-    bucket = "cvrax-terraform-state"
+    bucket = "cvrax-491419-tfstate-ba2510f0"
     prefix = "terraform/state"
   }
 }
