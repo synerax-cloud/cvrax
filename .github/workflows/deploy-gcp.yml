@@ -116,6 +116,11 @@ jobs:
           google_client_secret = "${{ secrets.GOOGLE_CLIENT_SECRET }}"
           domain_name          = "${{ secrets.DOMAIN_NAME }}"
           EOF
+          
+          echo "📋 Terraform variables created:"
+          echo "  project_id: ${{ secrets.GCP_PROJECT_ID }}"
+          echo "  region: ${{ env.REGION }}"
+          echo "  service_name: ${{ env.SERVICE_NAME }}"
       
       - name: Terraform Init
         working-directory: terraform
