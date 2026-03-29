@@ -1,6 +1,6 @@
 output "artifact_registry_url" {
   description = "Artifact Registry repository URL"
-  value       = format("%s-docker.pkg.dev/%s/%s", var.region, var.project_id, var.service_name)
+  value       = "us-central1-docker.pkg.dev/cvrax-491419/cvrax"
 }
 
 output "service_name" {
